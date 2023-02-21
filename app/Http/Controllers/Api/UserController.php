@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
+use Illuminate\Support\Facades\Validator;
 
 class UserController extends Controller
 {
@@ -99,7 +100,49 @@ class UserController extends Controller
     public function logout(Request $request)
     {
         $token = $request->user()->currentAccessToken()->delete();
-        
+
         return ResponseFormatter::success($token,'Token Revoked');
+    }
+
+    public function fetch(Request $request)
+    {
+        return ResponseFormatter::success($request->user,'Data Profile Success');
+    }
+
+    public function updateProfile(Request $request)
+    {
+        $data = $request->all();
+
+        $user = Auth::user();
+        $user->update($data);
+
+        return ResponseFormatter::success($user,'Profile Updated');
+    }
+
+    public function updatePhoto(Request $request)
+    {
+        // validasi
+        $validator = Validator::make($request->all(),[
+            'file' => 'required|image|max:2048',
+        ]);
+
+        if ($validator->fails()) {
+            return ResponseFormatter::error(
+                ['error' => $validator->errors()],
+                'update photo fails',
+                401
+            );
+        }
+        // Cek file ada atau ngak
+        if ($request->file('file')) {
+            $file = $request->file->store('assets/user','public');
+
+            // Simpan Foto
+            $user = Auth::user();
+            $user->profile_photo_path = $file;
+            $user->update();
+
+            return ResponseFormatter::success([$file],'File Successfully Updated');
+        }
     }
 }
